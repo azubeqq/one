@@ -144,20 +144,6 @@ pipeline {
     post {
         success {
             echo 'Pipeline completed successfully!'
-            script {
-                if (params.ACTION == 'deploy') {
-                    dir(TF_DIR) {
-                        // Это сработает, только если в main.tf есть output "instance_public_ip"
-                        sh 'terraform output -json > outputs.json'
-//                        def outputs = readJSON file: 'outputs.json'
-                        // Тут try/catch нужен по-хорошему, но пока оставим так
-                        if (outputs.instance_public_ip) {
-                             echo "Application deployed at: http://${outputs.instance_public_ip.value}:5000"
-                        }
-                    }
-                }
-            }
-        }
         failure {
             echo 'Pipeline failed!'
         }

@@ -1,0 +1,26 @@
+# ============================================
+# ФАЙЛ: roles/cadvisor/tasks/main.yml
+# ============================================
+---
+- name: Create cAdvisor directory
+  ansible.builtin.file:
+    path: "{{ cadvisor_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0755'
+
+- name: Template cAdvisor docker-compose
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ cadvisor_dir }}/docker-compose.yml"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0644'
+
+- name: Start cAdvisor container
+  community.docker.docker_compose_v2:
+    project_src: "{{ cadvisor_dir }}"
+    state: present
+    wait: true
+    wait_timeout: 60

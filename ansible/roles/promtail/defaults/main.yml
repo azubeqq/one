@@ -1,0 +1,33 @@
+# ========================================
+# РОЛЬ: promtail
+# Агент сбора логов (отправляет в Loki)
+# ========================================
+
+# --- roles/promtail/defaults/main.yml ---
+---
+# Директория для Promtail
+promtail_dir: "{{ base_dir }}/promtail"
+
+# Docker образ
+promtail_image: "grafana/promtail:2.9.0"
+
+# Имя контейнера
+promtail_container_name: "promtail"
+
+# Порт HTTP (для метрик и API)
+promtail_port: 9080
+
+# Куда отправлять логи (Loki endpoint)
+promtail_loki_url: "http://{{ loki_container_name }}:{{ loki_port }}/loki/api/v1/push"
+
+# Директория для хранения positions
+# Positions - отслеживание какие логи уже отправлены
+promtail_positions_dir: "{{ promtail_dir }}/positions"
+
+# Какие логи собирать
+promtail_scrape_docker: true    # Логи Docker контейнеров
+promtail_scrape_system: true    # Системные логи (/var/log)
+
+# Labels добавляемые ко всем логам
+promtail_external_labels:
+  host: "{{ inventory_hostname }}"

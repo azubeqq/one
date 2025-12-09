@@ -1,0 +1,12 @@
+{
+{% if docker_metrics_enabled %}
+  "metrics-addr": "0.0.0.0:{{ docker_metrics_port }}",
+  "experimental": true,
+{% endif %}
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "storage-driver": "overlay2"
+}

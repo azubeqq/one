@@ -1,0 +1,36 @@
+# ========================================
+# FLASK APPLICATION DOCKER COMPOSE
+# Использует образ из DockerHub
+# ========================================
+
+services:
+  {{ flask_container_name }}:
+    image: "{{ dockerhub_username }}/{{ flask_app_image }}:{{ flask_app_version }}"
+    
+    container_name: "{{ flask_container_name }}"
+
+    environment:
+      DATABASE_HOST: "{{ flask_db_host }}"
+      DATABASE_PORT: "{{ flask_db_port }}"
+      DATABASE_NAME: "{{ flask_db_name }}"
+      DATABASE_USER: "{{ flask_db_user }}"
+      DATABASE_PASSWORD: "{{ db_password }}"
+
+    ports:
+      - "{{ flask_app_port }}:5000"
+
+    networks:
+      - {{ docker_network_name }}
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: {{ flask_healthcheck_interval }}
+      timeout: {{ flask_healthcheck_timeout }}
+      retries: {{ flask_healthcheck_retries }}
+      start_period: {{ flask_healthcheck_start_period }}
+
+networks:
+  {{ docker_network_name }}:
+    external: true

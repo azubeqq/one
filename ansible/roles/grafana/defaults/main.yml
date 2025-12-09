@@ -1,0 +1,46 @@
+# ========================================
+# РОЛЬ: grafana
+# Система визуализации метрик и логов
+# ========================================
+
+# --- roles/grafana/defaults/main.yml ---
+---
+# Директория для Grafana
+grafana_dir: "{{ base_dir }}/grafana"
+
+# Docker образ
+grafana_image: "grafana/grafana:10.2.2"
+
+# Имя контейнера
+grafana_container_name: "grafana"
+
+# Порт веб-интерфейса
+grafana_port: 3000
+
+# Volume для данных (дашборды, настройки)
+grafana_volume_name: "grafana_data"
+
+# Администратор
+grafana_admin_user: "admin"
+# grafana_admin_password берётся из group_vars/all.yml
+
+# Директория для Alertmanager
+alertmanager_dir: "{{ base_dir }}/alertmanager"
+
+# Настройки безопасности
+grafana_allow_signup: "false"  # Запретить регистрацию
+grafana_anonymous_enabled: "false"  # Запретить анонимный доступ
+
+# Data sources (подключения к источникам данных)
+grafana_datasources:
+  # Prometheus - метрики
+  - name: Prometheus
+    type: prometheus
+    url: "http://{{ prometheus_container_name }}:9090"
+    is_default: true
+    
+  # Loki - логи
+  - name: Loki
+    type: loki
+    url: "http://{{ loki_container_name }}:3100"
+    is_default: false

@@ -1,0 +1,59 @@
+# --- roles/prometheus/tasks/main.yml ---
+---
+# Создаём директории для конфигов и alert rules
+- name: Create Prometheus directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0755'
+  loop:
+    - "{{ prometheus_dir }}"
+    - "{{ prometheus_dir }}/alerts"
+
+# Конфиг Prometheus с targets
+- name: Template Prometheus configuration
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ prometheus_dir }}/prometheus.yml"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0644'
+  notify: Reload Prometheus
+
+# Правила алертов
+- name: Template alert rules
+  ansible.builtin.template:
+    src: alerts.yml.j2
+    dest: "{{ prometheus_dir }}/alerts/alerts.yml"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0644'
+  notify: Reload Prometheus
+
+- name: Template Prometheus docker-compose
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ prometheus_dir }}/docker-compose.yml"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: '0644'
+
+- name: Start Prometheus container
+  community.docker.docker_compose_v2:
+    project_src: "{{ prometheus_dir }}"
+    state: present
+    wait: true
+    wait_timeout: 90
+  register: prometheus_result
+
+# Проверяем что Prometheus реально готов
+- name: Wait for Prometheus to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ prometheus_port }}/-/ready"
+    status_code: 200
+  register: prometheus_ready
+  until: prometheus_ready.status == 200
+  retries: 12
+  delay: 5

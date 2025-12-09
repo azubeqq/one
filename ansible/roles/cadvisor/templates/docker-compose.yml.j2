@@ -1,0 +1,41 @@
+# ============================================
+# ФАЙЛ: roles/cadvisor/templates/docker-compose.yml.j2
+# ============================================
+services:
+  {{ cadvisor_container_name }}:
+    image: "{{ cadvisor_image }}"
+    container_name: "{{ cadvisor_container_name }}"
+    
+    ports:
+      - "{{ cadvisor_port }}:8080"
+    
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    
+    privileged: true
+    
+    devices:
+      - /dev/kmsg
+    
+    networks:
+      - {{ docker_network_name }}
+    
+    restart: unless-stopped
+    mem_limit: 128m   # Ограничь память
+    cpus: 0.3   # Ограничь CPU
+    command:
+    - '--housekeeping_interval=10s'   # Реже собирай метрики (дефолт 1s)
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  {{ docker_network_name }}:
+    external: true

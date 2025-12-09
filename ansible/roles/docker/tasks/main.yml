@@ -1,0 +1,84 @@
+# tasks/main.yml
+---
+- name: Install Docker engine
+  ansible.builtin.yum:
+    name: docker
+    state: present
+
+- name: Enable and start Docker service
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+# Определяем архитектуру для Docker (x86_64 -> amd64)
+# Определяем архитектуру для Docker. Используем x86_64.
+- name: Normalize architecture for Docker Compose (Fixing whitespace)
+  ansible.builtin.set_fact:
+    docker_arch: "{% if ansible_architecture == 'x86_64' %}x86_64{% elif ansible_architecture == 'aarch64' %}aarch64{% else %}{{ ansible_architecture }}{% endif %}"
+- name: Ensure docker cli-plugins directory exists
+  ansible.builtin.file:
+    path: "{{ docker_compose_plugin_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Install Docker Compose V2 plugin
+  ansible.builtin.get_url:
+    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-linux-{{ docker_arch }}"
+    dest: "{{ docker_compose_plugin_dir }}/docker-compose"
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Install Docker Buildx plugin
+  ansible.builtin.get_url:
+    url: "https://github.com/docker/buildx/releases/download/{{ docker_buildx_version }}/buildx-{{ docker_buildx_version }}.linux-amd64"
+    dest: "{{ docker_compose_plugin_dir }}/docker-buildx"
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure /etc/docker directory exists
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    mode: '0755'
+
+- name: Configure Docker daemon
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: "{{ docker_daemon_config_path }}"
+    mode: '0644'
+  notify: Restart Docker
+
+- name: Add user to docker group
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    groups: docker
+    append: true
+
+- name: Verify Docker installation
+  ansible.builtin.command: docker --version
+  register: docker_version
+  changed_when: false
+
+- name: Verify Docker Compose V2 plugin
+  ansible.builtin.command: docker compose version
+  register: compose_version
+  changed_when: false
+  retries: 3
+  delay: 2
+  until: compose_version.rc == 0
+
+- name: Show Docker versions
+  ansible.builtin.debug:
+    msg:
+      - "Docker: {{ docker_version.stdout }}"
+      - "Compose V2: {{ compose_version.stdout }}"
+
+- name: Ensure Docker network exists
+  community.docker.docker_network:
+    name: "{{ docker_network_name }}"
+    state: present

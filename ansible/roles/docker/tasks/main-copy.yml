@@ -1,0 +1,63 @@
+# --- roles/docker/tasks/main.yml ---
+---
+
+# Установка Docker Engine
+- name: Install Docker engine and plugins
+  ansible.builtin.yum:
+    name:
+      - docker
+    state: present
+
+
+# Запускаем Docker + включаем автозапуск
+- name: Enable and start Docker service
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+# Создать /etc/docker при необходимости
+- name: Create Docker daemon config directory
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    mode: '0755'
+
+# Установка daemon.json
+- name: Configure Docker daemon
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: '0644'
+  notify: Restart Docker
+
+# Добавление пользователя в docker группу
+- name: Add user to docker group
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    groups: docker
+    append: true
+
+# Проверяем корректность установки Docker/Compose
+- name: Verify Docker install
+  ansible.builtin.command: docker --version
+  register: docker_v
+  changed_when: false
+
+- name: Verify Docker Compose install
+  ansible.builtin.command: docker compose version
+  register: compose_v
+  changed_when: false
+
+- name: Show docker info
+  ansible.builtin.debug:
+    msg:
+      - "Docker OK: {{ docker_v.stdout }}"
+      - "Compose OK: {{ compose_v.stdout }}"
+
+# Создаём Docker network
+- name: Ensure Docker network exists
+  community.docker.docker_network:
+    name: "{{ docker_network_name }}"
+    state: present
+  tags: always

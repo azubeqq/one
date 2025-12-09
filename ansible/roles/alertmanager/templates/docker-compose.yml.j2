@@ -1,0 +1,46 @@
+# --- roles/alertmanager/templates/docker-compose-alertmanager.yml.j2 ---
+# ========================================
+# ALERTMANAGER DOCKER COMPOSE
+# ========================================
+#version: '3.8'
+
+services:
+  {{ alertmanager_container_name }}:
+    image: "{{ alertmanager_image }}"
+    container_name: "{{ alertmanager_container_name }}"
+    
+    command:
+      # Путь к конфигу
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      # Директория для хранения состояния (silences, etc.)
+      - '--storage.path=/alertmanager'
+      # Уровень логирования
+      - '--log.level=info'
+    
+    ports:
+      - "{{ alertmanager_port }}:9093"
+    
+    volumes:
+      # Конфиг (read-only)
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      # Данные (silences, state)
+      - {{ alertmanager_volume_name }}:/alertmanager
+    
+    networks:
+      - {{ docker_network_name }}
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  {{ alertmanager_volume_name }}:
+    driver: local
+
+networks:
+  {{ docker_network_name }}:
+    external: true

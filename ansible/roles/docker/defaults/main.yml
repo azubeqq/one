@@ -1,0 +1,15 @@
+# ========================================
+# РОЛЬ: docker
+# Установка Docker и Docker Compose
+# ========================================
+
+# --- roles/docker/defaults/main.yml ---
+---
+
+docker_compose_plugin_dir: /usr/local/lib/docker/cli-plugins
+docker_compose_version: "v2.27.0"
+docker_buildx_version: "v0.30.1"
+docker_daemon_config_path: /etc/docker/daemon.json
+docker_network_name: "monitoring_net"
+docker_metrics_enabled: true
+docker_metrics_port: 9323

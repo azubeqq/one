@@ -1,0 +1,52 @@
+---
+- name: Create Flask app directory
+  ansible.builtin.file:
+    path: "{{ flask_app_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy Flask app docker-compose template
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ flask_app_dir }}/docker-compose.yml"
+    mode: '0644'
+
+- name: Login to DockerHub
+  community.docker.docker_login:
+    username: "{{ dockerhub_username }}"
+    password: "{{ dockerhub_token }}"
+  when: dockerhub_token is defined
+
+- name: Pull Flask app image from DockerHub
+  community.docker.docker_image:
+    name: "{{ dockerhub_username }}/{{ flask_app_image }}:{{ flask_app_version }}"
+    source: pull
+    state: present
+    force_source: yes
+
+- name: Deploy Flask app via Docker Compose
+  community.docker.docker_compose:
+    project_src: "{{ flask_app_dir }}"
+    state: present
+    pull: yes
+    recreate: smart
+  register: flask_compose_output
+
+- name: Display Flask app deployment status
+  ansible.builtin.debug:
+    var: flask_compose_output
+
+- name: Wait for Flask app to be healthy
+  ansible.builtin.uri:
+    url: "http://localhost:{{ flask_app_port }}/health"
+    status_code: 200
+    timeout: 5
+  register: result
+  until: result.status == 200
+  retries: 12
+  delay: 5
+  ignore_errors: yes
+
+- name: Show Flask app health check result
+  ansible.builtin.debug:
+    msg: "Flask app is {{ 'healthy' if result.status == 200 else 'NOT healthy' }}"

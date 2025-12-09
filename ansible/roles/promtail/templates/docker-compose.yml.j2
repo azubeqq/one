@@ -1,0 +1,47 @@
+# --- roles/promtail/templates/docker-compose-promtail.yml.j2 ---
+# ========================================
+# PROMTAIL DOCKER COMPOSE
+# ========================================
+#version: '3.8'
+
+services:
+  {{ promtail_container_name }}:
+    image: "{{ promtail_image }}"
+    container_name: "{{ promtail_container_name }}"
+    
+    command:
+      - '-config.file=/etc/promtail/promtail.yml'
+    
+    ports:
+      # HTTP порт (метрики, API)
+      - "{{ promtail_port }}:9080"
+    
+    volumes:
+      # Конфиг Promtail
+      - ./promtail.yml:/etc/promtail/promtail.yml:ro
+      
+      # Positions - writeable!
+      # Promtail сохраняет сюда прогресс чтения
+      - ./positions:/positions
+      
+{% if promtail_scrape_docker %}
+      # Логи Docker контейнеров (read-only)
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      
+      # Docker socket для получения метаданных контейнеров
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+{% endif %}
+      
+{% if promtail_scrape_system %}
+      # Системные логи (read-only)
+      - /var/log:/var/log:ro
+{% endif %}
+    
+    networks:
+      - {{ docker_network_name }}
+    
+    restart: unless-stopped
+
+networks:
+  {{ docker_network_name }}:
+    external: true

@@ -1,0 +1,168 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Мы убрали сборку, поэтому IMAGE_TAG теперь фиксированный (например, latest), 
+        // либо тот, который ты сам запушил руками.
+        DOCKER_IMAGE = "azubeq/flask-app"
+        IMAGE_TAG = "latest" 
+        
+        AWS_REGION = "us-east-1"
+        // ВАЖНО: Проверь, что папки называются именно так в твоем репозитории
+        TF_DIR = "${WORKSPACE}/terraform" 
+        ANSIBLE_DIR = "${WORKSPACE}/ansible"
+    }
+    
+    parameters {
+        choice(
+            name: 'ACTION',
+            choices: ['deploy', 'destroy'],
+            description: 'Choose action: deploy infrastructure or destroy it'
+        )
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                // Скачивает твой репо с кодом TF и Ansible
+                checkout scm
+            }
+        }
+        
+        // --- ЭТИ ЭТАПЫ (Build и Push) МЫ ПРОПУСКАЕМ ---
+        // Ты сказал, что образ уже готов и лежит на Докерхабе
+        
+        stage('Terraform Init') {
+            steps {
+                script {
+                    dir(TF_DIR) {
+                        // Тут важно: если у тебя backend s3, возможно, 
+                        // понадобятся креды или конфиг, если они не вшиты
+                        sh 'terraform init'
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Plan') {
+            when {
+                expression { params.ACTION == 'deploy' }
+            }
+            steps {
+                script {
+                    dir(TF_DIR) {
+                        sh 'terraform plan -out=tfplan'
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Apply') {
+            when {
+                expression { params.ACTION == 'deploy' }
+            }
+            steps {
+                script {
+                    dir(TF_DIR) {
+                        // ФИШКА: Этот input поставит пайплайн на ПАУЗУ.
+                        // Тебе нужно будет зайти в Jenkins и нажать "Approve".
+                        // Для тестов - супер. Для полной автоматизации потом уберешь.
+                        input message: 'Approve Terraform Apply?', ok: 'Apply'
+                        
+                        sh 'terraform apply -auto-approve tfplan'
+                    }
+                }
+            }
+        }
+        
+        stage('Wait for EC2 Instance') {
+            when {
+                expression { params.ACTION == 'deploy' }
+            }
+            steps {
+                script {
+                    // Ждем, пока поднимется SSH на новом сервере
+                    echo 'Waiting 60 seconds for EC2 instance to be ready...'
+                    sleep 60
+                }
+            }
+        }
+        
+        // Этот этап полезен для дебага, чтобы увидеть, видит ли ансибл хосты
+        stage('Refresh Ansible Dynamic Inventory') {
+            when {
+                expression { params.ACTION == 'deploy' }
+            }
+            steps {
+                script {
+                    dir(ANSIBLE_DIR) {
+                        // Убедись, что путь к inventory/aws_ec2.yml верный
+                        sh 'ansible-inventory -i inventory/aws_ec2.yml --graph'
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy Application with Ansible') {
+            when {
+                expression { params.ACTION == 'deploy' }
+            }
+            steps {
+                script {
+                    dir(ANSIBLE_DIR) {
+                        // Тут важно: проверь, где лежит SSH ключ.
+                        // В твоем коде его нет в явном виде, значит он должен быть настроен в ansible.cfg
+                        // или прописан в inventory.
+                        // Либо добавь --private-key как в моем прошлом примере.
+                        sh """
+                            ansible-playbook -i inventory/aws_ec2.yml \
+                                playbooks/deploy.yml \
+                                -e "flask_app_version=${IMAGE_TAG}" \
+                                -e "dockerhub_username=azubeq" \
+                                -v
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Destroy') {
+            when {
+                expression { params.ACTION == 'destroy' }
+            }
+            steps {
+                script {
+                    dir(TF_DIR) {
+                        input message: 'Are you sure you want to DESTROY infrastructure?', ok: 'Destroy'
+                        sh 'terraform destroy -auto-approve'
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+            script {
+                if (params.ACTION == 'deploy') {
+                    dir(TF_DIR) {
+                        // Это сработает, только если в main.tf есть output "instance_public_ip"
+                        sh 'terraform output -json > outputs.json'
+//                        def outputs = readJSON file: 'outputs.json'
+                        // Тут try/catch нужен по-хорошему, но пока оставим так
+                        if (outputs.instance_public_ip) {
+                             echo "Application deployed at: http://${outputs.instance_public_ip.value}:5000"
+                        }
+                    }
+                }
+            }
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

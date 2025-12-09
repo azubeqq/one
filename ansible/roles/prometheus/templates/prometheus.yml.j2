@@ -1,0 +1,72 @@
+# --- roles/prometheus/templates/prometheus.yml.j2 ---
+global:
+  scrape_interval: {{ prometheus_scrape_interval }}
+  evaluation_interval: {{ prometheus_evaluation_interval }}
+  external_labels:
+    monitor: 'prometheus-server'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['{{ alertmanager_container_name }}:9093']
+
+rule_files:
+  - '/etc/prometheus/alerts/*.yml'
+
+scrape_configs:
+{% for target in prometheus_static_targets %}
+  - job_name: '{{ target.job_name }}'
+{% if target.metrics_path is defined %}
+    metrics_path: '{{ target.metrics_path }}'
+{% endif %}
+    static_configs:
+      - targets: {{ target.targets | to_json }}
+{% if target.labels is defined %}
+        labels:
+{% for key, value in target.labels.items() %}
+          {{ key }}: '{{ value }}'
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+
+{% if prometheus_docker_sd_enabled %}
+  # ----------------------------------------
+  # Docker Service Discovery
+  # ----------------------------------------
+  - job_name: 'docker-containers'
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 30s
+    
+    relabel_configs:
+      # Имя контейнера
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container_name'
+        replacement: '$1'
+      
+      # Docker image
+      - source_labels: ['__meta_docker_container_image']
+        target_label: 'container_image'
+      
+      # Статус контейнера
+      - source_labels: ['__meta_docker_container_status']
+        target_label: 'container_status'
+      
+      # Сеть контейнера
+      - source_labels: ['__meta_docker_network_name']
+        target_label: 'docker_network'
+      
+      # УБРАЛИ фильтр prometheus.scrape=true
+      # Теперь Prometheus видит ВСЕ контейнеры
+      
+      # Формируем адрес для скрапинга из первого порта контейнера
+      - source_labels: ['__meta_docker_port_private']
+        target_label: '__meta_port'
+      
+      # Пропускаем контейнеры без открытых портов
+      - source_labels: ['__meta_docker_port_private']
+        regex: '.+'
+        action: keep
+{% endif %}

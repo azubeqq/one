@@ -67,7 +67,7 @@ pipeline {
                         // ФИШКА: Этот input поставит пайплайн на ПАУЗУ.
                         // Тебе нужно будет зайти в Jenkins и нажать "Approve".
                         // Для тестов - супер. Для полной автоматизации потом уберешь.
-                        input message: 'Approve Terraform Apply?', ok: 'Apply'
+                        // input message: 'Approve Terraform Apply?', ok: 'Apply'
                         
                         sh 'terraform apply -auto-approve tfplan'
                     }

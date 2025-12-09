@@ -133,7 +133,7 @@ pipeline {
             steps {
                 script {
                     dir(TF_DIR) {
-                        input message: 'Are you sure you want to DESTROY infrastructure?', ok: 'Destroy'
+                        // input message: 'Are you sure you want to DESTROY infrastructure?', ok: 'Destroy'
                         sh 'terraform destroy -auto-approve'
                     }
                 }

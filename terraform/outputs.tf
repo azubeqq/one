@@ -3,6 +3,11 @@ output "instance_public_ip" {
   value = aws_instance.app_server.public_ip
 }
 
+output "instance_id" {
+  description = "Instance ID"
+  value       = aws_instance.app_server.id
+}
+
 # Используй null_resource
 resource "null_resource" "generate_inventory" {
   depends_on = [aws_instance.app_server]

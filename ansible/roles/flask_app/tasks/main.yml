@@ -22,7 +22,7 @@
     name: "{{ dockerhub_username }}/{{ flask_app_image }}:{{ flask_app_version }}"
     source: pull
     state: present
-    force_source: yes
+    force_source: always
 
 - name: Deploy Flask app via Docker Compose
   community.docker.docker_compose_v2:
@@ -44,7 +44,7 @@
   until: result.status == 200
   retries: 12
   delay: 5
-  ignore_errors: yes
+  ignore_errors: always
 
 - name: Show Flask app health check result
   ansible.builtin.debug:

@@ -28,7 +28,6 @@
   community.docker.docker_compose_v2:
     project_src: "{{ flask_app_dir }}"
     state: present
-    pull: yes
     recreate: smart
   register: flask_compose_output
 

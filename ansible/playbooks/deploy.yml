@@ -80,9 +80,10 @@
           - "========================================="
           - "✅ Deployment Complete!"
           - "========================================="
-          - "Flask App:    http://{{ ansible_host }}:{{ flask_port }}"
+          - "Flask App:    http://{{ ansible_host }}:{{ flask_app_port }}"
           - "Prometheus:   http://{{ ansible_host }}:{{ prometheus_port }}"
           - "Grafana:      http://{{ ansible_host }}:{{ grafana_port }}"
           - "Alertmanager: http://{{ ansible_host }}:{{ alertmanager_port }}"
           - "Loki:         http://{{ ansible_host }}:{{ loki_port }}"
           - "========================================="
+

@@ -21,15 +21,13 @@
   community.docker.docker_image:
     name: "{{ dockerhub_username }}/{{ flask_app_image }}:{{ flask_app_version }}"
     source: pull
-    state: present
-    force_source: yes
+    force_pull: true
 
 - name: Deploy Flask app via Docker Compose
   community.docker.docker_compose_v2:
     project_src: "{{ flask_app_dir }}"
     state: present
-    recreate: smart
-  register: flask_compose_output
+    recreate: auto
 
 - name: Display Flask app deployment status
   ansible.builtin.debug:

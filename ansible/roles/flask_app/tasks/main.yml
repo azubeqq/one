@@ -21,7 +21,7 @@
   community.docker.docker_image:
     name: "{{ dockerhub_username }}/{{ flask_app_image }}:{{ flask_app_version }}"
     source: pull
-    force_pull: true
+    force_source: true 
 
 - name: Deploy Flask app via Docker Compose
   community.docker.docker_compose_v2:

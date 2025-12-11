@@ -4,8 +4,6 @@ pipeline {
     environment {
         // Мы убрали сборку, поэтому IMAGE_TAG теперь фиксированный (например, latest), 
         // либо тот, который ты сам запушил руками.
-        DOCKER_IMAGE = "azubeq/flask-app"
-        IMAGE_TAG = "latest" 
         
         AWS_REGION = "us-east-1"
         // ВАЖНО: Проверь, что папки называются именно так в твоем репозитории
@@ -117,7 +115,6 @@ pipeline {
                         sh """
                             ansible-playbook -i inventory/aws_ec2.yml \
                                 playbooks/deploy.yml \
-                                -e "flask_app_version=${IMAGE_TAG}" \
                                 -e "dockerhub_username=azubeq" \
                                 -v
                         """

@@ -1,7 +1,7 @@
 # tasks/main.yml
 ---
 - name: Install Docker engine
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     name: docker
     state: present
 
@@ -35,11 +35,16 @@
 
 - name: Install Docker Compose V2 plugin
   ansible.builtin.get_url:
-    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-linux-{{ docker_arch }}"
+    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-linux-x86_64"
     dest: "{{ docker_compose_plugin_dir }}/docker-compose"
     mode: '0755'
     owner: root
     group: root
+    timeout: 120
+  register: compose_result
+  until: compose_result is succeeded
+  retries: 5
+  delay: 5
 
 - name: Install Docker Buildx plugin
   ansible.builtin.get_url:

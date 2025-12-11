@@ -7,7 +7,7 @@ flask_app_dir: "{{ base_dir }}/flask"
 flask_app_port: 5000
 dockerhub_username: "azubeq"
 flask_app_image: "flask_app"
-flask_app_version: "v1"
+flask_app_version: "v2"
 database_url: "postgresql://user:pass@db:5432/appdb"
 # --- roles/flask_app/defaults/main.yml ---
 

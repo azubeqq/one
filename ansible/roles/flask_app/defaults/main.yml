@@ -5,7 +5,7 @@
 ---
 flask_app_dir: "{{ base_dir }}/flask"
 flask_app_port: 5000
-dockerhub_username: azubeq
+dockerhub_username: "azubeq"
 flask_app_image: "flask-app"
 flask_app_version: "v1"
 database_url: "postgresql://user:pass@db:5432/appdb"

@@ -39,51 +39,46 @@ scrape_configs:
         refresh_interval: 30s
     
     relabel_configs:
-      # 1. Имя контейнера (убираем ведущий слэш)
+      # Имя контейнера
       - source_labels: ['__meta_docker_container_name']
         regex: '/(.*)'
         target_label: 'container_name'
         replacement: '$1'
-      
-      # 2. Docker image
+
+      # Docker image
       - source_labels: ['__meta_docker_container_image']
-        target_label: 'image'
-      
-      # 3. Compose service name (если есть)
-      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
-        target_label: 'compose_service'
-      
-      # 4. Compose project (если есть)
-      - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
-        target_label: 'compose_project'
-      
-      # 5. Container ID
-      - source_labels: ['__meta_docker_container_id']
-        target_label: 'container_id'
-        regex: '(.{12}).*'
-        replacement: '$1'
-      
-      # 6. Сеть контейнера
+        target_label: 'container_image'
+
+      # Статус контейнера
+      - source_labels: ['__meta_docker_container_status']
+        target_label: 'container_status'
+
+      # Сеть контейнера
       - source_labels: ['__meta_docker_network_name']
-        target_label: 'network'
-      
-      # 7. ВАЖНО: Оставляем только running контейнеры
-      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'docker_network'
+
+      # --- KEEP только помеченные контейнеры ---
+      # Оставляем только контейнеры с label prometheus.scrape=false
+      - source_labels: ['__meta_docker_container_label_prometheus_scrape']
+        regex: 'true'
         action: keep
-        regex: '.+'
-      
-      # 8. КРИТИЧНО: Формируем правильный адрес для скрапинга
-      # Используем имя контейнера + первый экспонированный порт
-      - source_labels: ['__meta_docker_container_name', '__meta_docker_port_private']
-        regex: '/(.*);(\d+)'
-        target_label: '__address__'
+
+      # --- Формируем __address__ ---
+      # Первый вариант: если есть label prometheus.metrics_port, используем его
+      - source_labels: ['__meta_docker_container_network_ip', '__meta_docker_container_label_prometheus_metrics_port']
+        regex: '([^;]+);(.+)'
         replacement: '$1:$2'
-      
-      # 9. Сохраняем оригинальный порт
-      - source_labels: ['__meta_docker_port_private']
-        target_label: 'port'
-      
-      # 10. Instance = container name (для дашборда)
-      - source_labels: ['container_name']
-        target_label: 'instance'
+        target_label: '__address__'
+
+      # Fallback: используем первый приватный порт контейнера (текущая логика)
+      - source_labels: ['__meta_docker_container_network_ip', '__meta_docker_port_private']
+        regex: '([^;]+);(.+)'
+        replacement: '$1:$2'
+        target_label: '__address__'
+
+      # Пропускаем контейнеры без адреса/порта (как раньше)
+      - source_labels: ['__address__']
+        regex: '.+'
+        action: keep
+
 {% endif %}

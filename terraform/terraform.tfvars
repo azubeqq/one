@@ -8,6 +8,6 @@ key_name = "jenkins_ec2_key"
 
 volume_size = 18
 instance_type = "t3.small"
-project_name = "app-project"
+project_name = "App"
 public_subnet_cidr = "10.0.100.0/24"
 app_vpc_cidr = "10.0.0.0/16"

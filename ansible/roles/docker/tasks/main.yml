@@ -11,49 +11,47 @@
     enabled: true
     state: started
 
-# Определяем архитектуру для Docker (x86_64 -> amd64)
-# Определяем архитектуру для Docker. Используем x86_64.
-#- name: Normalize architecture for Docker Compose (Fixing whitespace)
-#  ansible.builtin.set_fact:
-#    docker_arch: "{% if ansible_architecture == 'x86_64' %}x86_64{% elif ansible_architecture == 'aarch64' %}aarch64{% else %}{{ ansible_architecture }}{% endif %}"
-#- name: Ensure docker cli-plugins directory exists
-#  ansible.builtin.file:
-#    path: "{{ docker_compose_plugin_dir }}"
-#    state: directory
-#    owner: root
-#    group: root
-#    mode: '0755'
+# Убедиться, что директория cli-plugins существует
+- name: Ensure docker CLI plugins directory exists
+  ansible.builtin.file:
+    path: /usr/local/lib/docker/cli-plugins
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
 
-#- name: Install Docker Compose V2 plugin
-#  ansible.builtin.get_url:
-#    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-linux-{{ docker_arch }}"
-#    dest: "{{ docker_compose_plugin_dir }}/docker-compose"
-#    mode: '0755'
-#    owner: root
-#    group: root
+ Определяем архитектуру для Docker (x86_64 -> amd64)
+ Определяем архитектуру для Docker. Используем x86_64.
+- name: Normalize architecture for Docker Compose (Fixing whitespace)
+  ansible.builtin.set_fact:
+    docker_arch: "{% if ansible_architecture == 'x86_64' %}x86_64{% elif ansible_architecture == 'aarch64' %}aarch64{% else %}{{ ansible_architecture }}{% endif %}"
+- name: Ensure docker cli-plugins directory exists
+  ansible.builtin.file:
+    path: "{{ docker_compose_plugin_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
 
-#- name: Install Docker Buildx plugin
-#  ansible.builtin.get_url:
-#    url: "https://github.com/docker/buildx/releases/download/{{ docker_buildx_version }}/buildx-{{ docker_buildx_version }}.linux-amd64"
-#    dest: "{{ docker_compose_plugin_dir }}/docker-buildx"
-#    owner: root
-#    group: root
-#    mode: '0755'
-#  register: buildx_download
-#  until: buildx_download is succeeded
-#  retries: 5
-#  delay: 5
-
-- name: Install Docker Compose plugin
-  ansible.builtin.dnf:
-    name: docker-compose-plugin
-    state: present
+- name: Install Docker Compose V2 plugin
+  ansible.builtin.get_url:
+    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-linux-{{ docker_arch }}"
+    dest: "{{ docker_compose_plugin_dir }}/docker-compose"
+    mode: '0755'
+    owner: root
+    group: root
 
 - name: Install Docker Buildx plugin
-  ansible.builtin.dnf:
-    name: docker-buildx-plugin
-    state: present
-
+  ansible.builtin.get_url:
+    url: "https://github.com/docker/buildx/releases/download/{{ docker_buildx_version }}/buildx-{{ docker_buildx_version }}.linux-amd64"
+    dest: "{{ docker_compose_plugin_dir }}/docker-buildx"
+    owner: root
+    group: root
+    mode: '0755'
+  register: buildx_download
+  until: buildx_download is succeeded
+  retries: 5
+  delay: 5
 
 - name: Ensure /etc/docker directory exists
   ansible.builtin.file:

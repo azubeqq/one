@@ -108,16 +108,24 @@ pipeline {
             steps {
                 script {
                     dir(ANSIBLE_DIR) {
-                        // Тут важно: проверь, где лежит SSH ключ.
-                        // В твоем коде его нет в явном виде, значит он должен быть настроен в ansible.cfg
-                        // или прописан в inventory.
-                        // Либо добавь --private-key как в моем прошлом примере.
-                        sh """
-                            ansible-playbook -i inventory/aws_ec2.yml \
-                                playbooks/deploy.yml \
-                                -e "dockerhub_username=azubeq" \
-                                -v
-                        """
+                        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+                        // 1. Оборачиваем команду в withCredentials
+                        // credentialsId: 'dockerhub-credentials' — это ID, который ты создал в Jenkins
+                        withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
+                            
+                            // 2. Внутри sh используем переменные ${DH_USER} и ${DH_PASS}
+                            sh """
+                                ansible-playbook -i inventory/aws_ec2.yml \
+                                    playbooks/deploy.yml \
+                                    -e "dockerhub_user=${DH_USER}" \
+                                    -e "dockerhub_username=${DH_USER}" \
+                                    -e "dockerhub_token=${DH_PASS}" \
+                                    -v
+                            """
+                            // Примечание: я добавил и dockerhub_user и dockerhub_username, 
+                            // так как не вижу твой Ansible-код, чтобы наверняка попасть в имя переменной.
+                        }
+                        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
                     }
                 }
             }

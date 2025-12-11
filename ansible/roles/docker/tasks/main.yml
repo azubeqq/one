@@ -39,6 +39,11 @@
     owner: root
     group: root
     mode: '0755'
+  register: buildx_download
+  until: buildx_download is succeeded
+  retries: 5
+  delay: 5
+
 
 - name: Ensure /etc/docker directory exists
   ansible.builtin.file:
